@@ -196,6 +196,7 @@ void add_feather_entry( char *subject, char *predicate, char *object )
   object_t->count++;
 
   increment_recursive_count( object_t );
+  cleanup_recursive( object_t );
 }
 
 void increment_recursive_count( trie *t )
@@ -203,10 +204,32 @@ void increment_recursive_count( trie *t )
   trie **ptr;
 
   t->recursive_count++;
+  t->seen = 1;
 
   if ( t->data )
+  {
     for ( ptr = t->data; *ptr; ptr++ )
-      increment_recursive_count( *ptr );
+    {
+      if ( !(*ptr)->seen )
+        increment_recursive_count( *ptr );
+    }
+  }
+}
+
+void cleanup_recursive( trie *t )
+{
+  trie **ptr;
+
+  t->seen = 0;
+
+  if ( t->data )
+  {
+    for ( ptr = t->data; *ptr; ptr++ )
+    {
+      if ( (*ptr)->seen )
+        cleanup_recursive( *ptr );
+    }
+  }
 }
 
 int get_count_by_iri( char *iri )

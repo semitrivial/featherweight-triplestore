@@ -23,6 +23,7 @@ struct TRIE
   int count;
   int recursive_count;
   trie **data;
+  int seen;
 };
 
 /*
@@ -46,6 +47,7 @@ int get_count_by_iri( char *iri );
 int get_recursive_count_by_iri( char *iri );
 void add_to_data( trie ***dest, trie *datum );
 void increment_recursive_count( trie *t );
+void cleanup_recursive( trie *t );
 
 /*
  * srv.c

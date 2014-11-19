@@ -12,6 +12,7 @@ trie *blank_trie( void )
   t->label = NULL;
   t->count = 0;
   t->data = NULL;
+  t->seen = 0;
 
   return t;
 }
