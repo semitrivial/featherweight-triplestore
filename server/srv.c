@@ -140,13 +140,20 @@ void main_loop( void )
 
       if ( !*reqptr )
       {
-        send_400_response( req );
+        send_400_response( req, "Syntax Error" );
         continue;
       }
 
       *reqptr = '\0';
       reqtype = (*req->query == '/') ? req->query + 1 : req->query;
       request = url_decode(&reqptr[1]);
+
+      if ( !strcmp( reqtype, "shortpath" ) )
+      {
+        handle_shortpath( request, req );
+        free( request );
+        return;
+      }
 
       if ( !strcmp( reqtype, "count" ) )
         count = get_count_by_iri( request );
@@ -156,7 +163,7 @@ void main_loop( void )
       {
         *reqptr = '/';
         free( request );
-        send_400_response( req );
+        send_400_response( req, "Syntax Error" );
         continue;
       }
 
@@ -494,7 +501,7 @@ void http_send( http_request *req, char *txt, int len )
   c->outbuflen = len;
 }
 
-void send_400_response( http_request *req )
+void send_400_response( http_request *req, char *err )
 {
   char buf[MAX_STRING_LEN];
 
@@ -504,10 +511,11 @@ void send_400_response( http_request *req )
                 "%s"
                 "Content-Length: %d\r\n"
                 "\r\n"
-                "Syntax Error",
+                "%s",
                 current_date(),
                 nocache_headers(),
-                strlen( "Syntax Error" ) );
+                strlen( err ),
+                err );
 
   http_write( req, buf );
 }
@@ -605,5 +613,77 @@ char *load_file( char *filename )
 
     if ( !*bptr )
       return buf;
+  }
+}
+
+void handle_shortpath( char *request, http_request *req )
+{
+  char *ptr;
+  trie *x, *y;
+  trie_path *p;
+
+  for ( ptr = request; *ptr; ptr++ )
+    if ( *ptr == ',' )
+      break;
+
+  if ( !*ptr )
+  {
+    send_400_response( req, "Syntax Error: expected comma" );
+    return;
+  }
+
+  *ptr = '\0';
+
+  if ( !(x = trie_search( request, iritrie ))
+  ||   !(y = trie_search( &ptr[1], iritrie )) )
+  {
+    send_400_response( req, "Unrecognized class" );
+    return;
+  }
+
+  p = calculate_shortest_path( x, y );
+
+  if ( !p )
+    send_200_response( req, "{\"Results\": []}" );
+  else
+  {
+    char *buf = malloc( sizeof(char) * p->length * (MAX_LABEL_LEN*2) + 256);
+    char *bptr;
+    trie **tptr;
+    int fFirst = 0, *iptr;
+
+    sprintf( buf, "{\"Results\": [" );
+    bptr = &buf[strlen(buf)];
+
+    for ( tptr = p->steps; *tptr; tptr++ )
+    {
+      if ( fFirst )
+        *bptr++ = ',';
+      else
+        fFirst = 1;
+
+      sprintf( bptr, "%s", get_url_shortform(trie_to_static( *tptr )) );
+      bptr = &bptr[strlen(bptr)];
+    }
+
+    sprintf( bptr, "], \"Relations\": [" );
+    bptr = &bptr[strlen(bptr)];
+
+    for ( fFirst = 0, iptr = p->reln_types; *iptr != -1; iptr++ )
+    {
+      if ( fFirst )
+        *bptr++ = ',';
+      else
+        fFirst = 1;
+
+      sprintf( bptr, "%s", reln_type_to_string( *iptr ) );
+      bptr = &bptr[strlen(bptr)];
+    }
+
+    sprintf( bptr, "]}" );
+
+    send_200_response( req, buf );
+    free( buf );
+    free_trie_path( p );
   }
 }

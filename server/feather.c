@@ -23,6 +23,7 @@ void parse_feather_parts_file(FILE *fp)
    */
   char read_buf[READ_BLOCK_SIZE], *read_end = &read_buf[READ_BLOCK_SIZE], *read_ptr = read_end;
   int fread_len;
+  int reln_type;
 
   printf( "Parsing partsfile...\n" );
 
@@ -36,7 +37,7 @@ void parse_feather_parts_file(FILE *fp)
     if ( c == '\n' )
     {
       *sptr = '\0';
-      add_feather_part(bigger,smaller);
+      add_feather_part(bigger,smaller,reln_type);
       fptr = firstword;
       bptr = bigger;
       sptr = smaller;
@@ -57,6 +58,18 @@ void parse_feather_parts_file(FILE *fp)
       *fptr = '\0';
       bptr = bigger;
       fSpace = 1;
+
+      if ( !strcmp( firstword, "Sub" ) )
+        reln_type = RELN_TYPE_SUB;
+      else
+      if ( !strcmp( firstword, "Part" ) )
+        reln_type = RELN_TYPE_PART;
+      else
+      {
+        fprintf( stderr, "Error on line %d of feather-file: firstword is neither 'Sub' nor 'Part'\n\n", linenum );
+        abort();
+      }
+
       continue;
     }
 
@@ -83,6 +96,7 @@ void parse_feather_parts_file(FILE *fp)
   }
 
   printf( "Finished parsing file\n" );
+
   return;
 }
 
@@ -163,9 +177,10 @@ void parse_feather_trips_file(FILE *fp)
   return;
 }
 
-void add_to_data( trie ***dest, trie *datum )
+void add_to_data( trie ***dest, trie *datum, int **dest_reln_parts, int reln_part )
 {
   trie **data;
+  int *parts;
   int cnt;
 
   if ( !*dest )
@@ -173,6 +188,10 @@ void add_to_data( trie ***dest, trie *datum )
     CREATE( *dest, trie *, 2 );
     (*dest)[0] = datum;
     (*dest)[1] = NULL;
+
+    CREATE( *dest_reln_parts, int, 2 );
+    (*dest_reln_parts)[0] = reln_part;
+    (*dest_reln_parts)[1] = -1;
   }
   else
   {
@@ -182,8 +201,16 @@ void add_to_data( trie ***dest, trie *datum )
     CREATE( data, trie *, cnt + 2 );
     memcpy( data, *dest, cnt * sizeof(trie*) );
     data[cnt] = datum;
+    data[cnt+1] = NULL;
     free( *dest );
     *dest = data;
+
+    CREATE( parts, int, cnt + 2 );
+    memcpy( parts, *dest_reln_parts, cnt * sizeof(int) );
+    parts[cnt] = reln_part;
+    parts[cnt+1] = -1;
+    free( *dest_reln_parts );
+    *dest_reln_parts = parts;
   }
 }
 
@@ -252,12 +279,132 @@ int get_recursive_count_by_iri( char *iri )
   return iri_t->recursive_count;
 }
 
-void add_feather_part( char *bigger, char *smaller )
+void add_feather_part( char *bigger, char *smaller, int reln_type )
 {
   trie *bigtrie = trie_strdup( bigger, iritrie );
   trie *smalltrie = trie_strdup( smaller, iritrie );
 
-  add_to_data( &smalltrie->data, bigtrie );
+  add_to_data( &smalltrie->data, bigtrie, &smalltrie->reln_types, reln_type );
 
   return;
+}
+
+void free_trie_path( trie_path *p )
+{
+  free( p->steps );
+  free( p->reln_types );
+  free( p );
+}
+
+trie_path *calculate_shortest_path( trie *anc, trie *des )
+{
+  one_step *head=NULL, *tail=NULL, *step, *curr;
+
+  if ( anc == des )
+  {
+    trie_path *path;
+
+    CREATE( path, trie_path, 1 );
+    path->length = 1;
+    CREATE( path->steps, trie *, 2 );
+    path->steps[0] = anc;
+    path->steps[1] = NULL;
+    CREATE( path->reln_types, int, 1 );
+    path->reln_types[0] = -1;
+
+    return path;
+  }
+
+  if ( !des->data || !*des->data )
+    return NULL;
+
+  CREATE( step, one_step, 1 );
+  step->depth = 0;
+  step->backtrace = NULL;
+  step->location = des;
+  step->reln_type = -1;
+  des->seen = 1;
+
+  LINK2( step, head, tail, next, prev );
+  curr = step;
+
+  for ( ; ; curr = curr->next )
+  {
+    trie **parents;
+
+    if ( !curr || curr->depth > MAX_PATH_LEN - 3 )
+    {
+      free_one_steps( head );
+      cleanup_recursive( des );
+      return NULL;
+    }
+
+    if ( curr->location == anc )
+    {
+      trie **steps, **sptr;
+      trie_path *path;
+      int *iptr;
+
+      CREATE( path, trie_path, 1 );
+      path->length = curr->depth + 1;
+
+      CREATE( steps, trie *, curr->depth + 2 );
+      sptr = steps;
+
+      CREATE( path->reln_types, int, curr->depth + 1 );
+      iptr = path->reln_types;
+
+      do
+      {
+        *sptr++ = curr->location;
+
+        if ( curr->reln_type != -1 )
+          *iptr++ = curr->reln_type;
+
+        curr = curr->backtrace;
+      }
+      while ( curr );
+
+      *sptr = NULL;
+      *iptr = -1;
+
+      path->steps = steps;
+
+      free_one_steps( head );
+      cleanup_recursive( des );
+
+      return path;
+    }
+
+    if ( curr->location->data )
+    {
+      int *iptr;
+
+      for ( parents = curr->location->data, iptr = curr->location->reln_types; *parents; parents++, iptr++ )
+      {
+        if ( (*parents)->seen )
+          continue;
+
+        CREATE( step, one_step, 1 );
+        step->depth = curr->depth + 1;
+        step->backtrace = curr;
+        step->location = *parents;
+        step->reln_type = *iptr;
+        LINK2( step, head, tail, next, prev );
+
+        (*parents)->seen = 1;
+      }
+    }
+  }
+}
+
+void free_one_steps( one_step *head )
+{
+  one_step *next;
+
+  for ( ; head; head = next )
+  {
+    next = head->next;
+    free( head );
+  }
 }

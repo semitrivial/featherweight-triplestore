@@ -149,3 +149,13 @@ char *url_decode(char *str) {
   *pbuf = '\0';
   return buf;
 }
+
+char *reln_type_to_string( int reln_type )
+{
+  if ( reln_type == RELN_TYPE_SUB )
+    return "sub";
+  if ( reln_type == RELN_TYPE_PART )
+    return "part";
+
+  return "unknown";
+}
