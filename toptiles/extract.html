@@ -1,0 +1,38 @@
+<!-- Given a "toptiles file" (in json format, like the included toptiles.js), turn it into lines that can be inserted into a feather-file -->
+
+<html>
+ <head>
+  <title>Toptiles extractor</title>
+  <script src="toptiles.js"></script>
+
+  <script>
+
+  String.prototype.replaceAll = function(search, replace)
+  {
+    return this.replace(new RegExp('[' + search + ']', 'g'), replace);
+  };
+
+  var output = "";
+
+  for ( var i = 0; i < top_tiles.length; i++ )
+  {
+    if ( top_tiles[i].sub === null )
+      continue;
+
+    for ( var j = 0; j < top_tiles[i].sub.length; j++ )
+    {
+      if ( top_tiles[i].sub[j] === null || top_tiles[i].sub[j].entity === null )
+        continue;
+
+      output += "Seed "+top_tiles[i]._id+" "+top_tiles[i].sub[j].entity._id.replace("fma:","http://purl.org/obo/owlapi/fma#FMA_")+"<br/>";
+    }
+  }
+
+  </script>
+ </head>
+
+ <body onload="document.getElementById('outputloc').innerHTML = output;">
+   <div id='outputloc'>
+   </div>
+ </body>
+</html>

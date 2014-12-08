@@ -65,6 +65,9 @@ void parse_feather_parts_file(FILE *fp)
       if ( !strcmp( firstword, "Part" ) )
         reln_type = RELN_TYPE_PART;
       else
+      if ( !strcmp( firstword, "Seed" ) )
+        reln_type = RELN_TYPE_SEED;
+      else
       {
         fprintf( stderr, "Error on line %d of feather-file: firstword is neither 'Sub' nor 'Part'\n\n", linenum );
         abort();

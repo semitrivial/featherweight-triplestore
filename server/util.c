@@ -107,7 +107,7 @@ char *get_url_shortform( char *iri )
   char *ptr;
 
   if ( iri[0] != 'h' || iri[1] != 't' || iri[2] != 't' || iri[3] != 'p' )
-    return NULL;
+    return iri;
 
   ptr = &iri[strlen(iri)-1];
 
@@ -152,10 +152,11 @@ char *url_decode(char *str) {
 
 char *reln_type_to_string( int reln_type )
 {
-  if ( reln_type == RELN_TYPE_SUB )
-    return "sub";
-  if ( reln_type == RELN_TYPE_PART )
-    return "part";
-
-  return "unknown";
+  switch( reln_type )
+  {
+    case RELN_TYPE_SUB: return "sub";
+    case RELN_TYPE_PART: return "part";
+    case RELN_TYPE_SEED: return "seed";
+    default: return "unknown";
+  }
 }

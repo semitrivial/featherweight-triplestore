@@ -10,8 +10,9 @@
 #define MAX_LABEL_LEN 256
 #define MAX_PATH_LEN 256
 
-#define RELN_TYPE_SUB 2
-#define RELN_TYPE_PART 3
+#define RELN_TYPE_SUB 1
+#define RELN_TYPE_PART 2
+#define RELN_TYPE_SEED 3
 
 /*
  * Typedefs
