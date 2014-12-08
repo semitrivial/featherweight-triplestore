@@ -114,7 +114,7 @@ char *get_url_shortform( char *iri )
   do
   {
     if ( ptr <= iri )
-      return NULL;
+      return iri;
     if ( *ptr == '#' )
       return &ptr[1];
     ptr--;
