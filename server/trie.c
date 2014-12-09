@@ -227,6 +227,20 @@ trie *trie_search( char *buf, trie *base )
   }
 }
 
+trie *trie_search_with_prefix( char *prefix, char *buf, trie *base )
+{
+  char *concat;
+  trie *result;
+
+  CREATE( concat, char, strlen(prefix) + strlen(buf) + 1 );
+  sprintf( concat, "%s%s", prefix, buf );
+
+  result = trie_search( concat, base );
+
+  free( concat );
+
+  return result;
+}
 
 char *trie_to_static( trie *t )
 {

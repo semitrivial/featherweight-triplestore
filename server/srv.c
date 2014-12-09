@@ -697,16 +697,31 @@ void handle_shortpath( char *request, http_request *req )
 
 void handle_subgraph_request( http_request *req, char *request )
 {
-  int commas = 0, fEnd = 0, count=0, fFirst;
+  int commas = 0, fEnd = 0, count=0, fFirst=0;
   trie **nodes, **nptr, *t;
-  char *ptr, *left, *buf, *bptr;
+  char *ptr, *left, *buf, *bptr, *prefix;
   subgraph_reln *head, *reln, *reln_next;
 
   for ( ptr = request; *ptr; ptr++ )
     if ( *ptr == ',' )
       commas++;
 
-  CREATE( nodes, trie *, commas + 2 );
+  if ( commas < 1 )
+  {
+    send_200_response( req, "{\"Results\": []}" );
+    return;
+  }
+
+  if ( commas > MAX_SUBGRAPH_NODES )
+  {
+    send_200_response( req, "Too many nodes" );
+    return;
+  }
+
+  /*
+   * First argument is prefix, hence commas + 1 instead of commas + 2 in the next line
+   */
+  CREATE( nodes, trie *, commas + 1 );
   nptr = nodes;
 
   left = ptr = request;
@@ -720,20 +735,29 @@ void handle_subgraph_request( http_request *req, char *request )
       else
         fEnd = 1;
 
-      if ( left == ptr )
+      if ( left == ptr && fFirst )
       {
         send_400_response( req, "Blank node name" );
         free( nodes );
         return;
       }
 
-      t = trie_search( left, iritrie );
+      if ( !fFirst )
+      {
+        fFirst = 1;
+        prefix = left;
+        left = &ptr[1];
+        ptr++;
+        continue;
+      }
+
+      t = trie_search_with_prefix( prefix, left, iritrie );
       if ( !t )
       {
         if ( strlen(left) < 100 )
         {
           char *buf = malloc( strlen(left) + 1024 );
-          sprintf( buf, "Node %s is not in the database", left );
+          sprintf( buf, "Node %s%s is not in the database", prefix, left );
           send_400_response( req, buf );
           free(buf);
         }

@@ -9,6 +9,7 @@
 
 #define MAX_LABEL_LEN 256
 #define MAX_PATH_LEN 256
+#define MAX_SUBGRAPH_NODES 1000
 
 #define RELN_TYPE_SUB 1
 #define RELN_TYPE_PART 2
@@ -106,6 +107,7 @@ trie *blank_trie(void);
 trie *trie_strdup( char *buf, trie *base );
 trie *trie_search( char *buf, trie *base );
 char *trie_to_static( trie *t );
+trie *trie_search_with_prefix( char *prefix, char *buf, trie *base );
 
 /*
  * util.c
