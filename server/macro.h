@@ -1,4 +1,11 @@
 /*
+ * Bit-twiddling macros
+ */
+#define IS_SET(flag, bit) ((flag) & (bit))
+#define SET_BIT(var, bit) ((var) |= (bit))
+#define REMOVE_BIT(var, bit) ((var) &= ~(bit))
+
+/*
  * Memory allocation macro
  */
 #define CREATE(result, type, number)\

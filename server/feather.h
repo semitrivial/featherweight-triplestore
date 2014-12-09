@@ -14,12 +14,17 @@
 #define RELN_TYPE_PART 2
 #define RELN_TYPE_SEED 3
 
+#define SUBGRAPH_NODE 1
+#define SUBGRAPH_VISITED 2
+#define SUBGRAPH_AVOID_DUPES 3
+
 /*
  * Typedefs
  */
 typedef struct TRIE trie;
 typedef struct TRIE_PATH trie_path;
 typedef struct ONE_STEP one_step;
+typedef struct SUBGRAPH_RELN subgraph_reln;
 
 /*
  * Structures
@@ -53,6 +58,15 @@ struct ONE_STEP
   int reln_type;
 };
 
+struct SUBGRAPH_RELN
+{
+  subgraph_reln *next;
+  subgraph_reln *prev;
+  trie *parent;
+  trie *child;
+  int reln_type;
+};
+
 /*
  * Global variables
  */
@@ -78,6 +92,7 @@ void cleanup_recursive( trie *t );
 void free_trie_path( trie_path *p );
 trie_path *calculate_shortest_path( trie *anc, trie *des );
 void free_one_steps( one_step *head );
+subgraph_reln *compute_subgraph( trie **nodes, int *count );
 
 /*
  * srv.c

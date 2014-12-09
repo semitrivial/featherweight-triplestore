@@ -411,3 +411,68 @@ void free_one_steps( one_step *head )
     free( head );
   }
 }
+
+subgraph_reln *compute_subgraph( trie **nodes, int *count )
+{
+  trie **tptr, **node;
+  subgraph_reln *reln_head = NULL, *reln_tail = NULL, *reln;
+
+  for ( tptr = nodes; *tptr; tptr++ )
+    SET_BIT( (*tptr)->seen, SUBGRAPH_NODE );
+
+  for ( node = nodes; *node; node++ )
+  {
+    one_step *step_head = NULL, *step_tail = NULL, *step, *curr;
+
+    if ( IS_SET( (*node)->seen, SUBGRAPH_AVOID_DUPES ) )
+      continue;
+    SET_BIT( (*node)->seen, SUBGRAPH_AVOID_DUPES );
+
+    CREATE( step, one_step, 1 );
+    step->location = *node;
+    step->reln_type = -1;
+    step->backtrace = NULL;
+    LINK2( step, step_head, step_tail, next, prev );
+    SET_BIT( (*node)->seen, SUBGRAPH_VISITED );
+
+    for ( curr = step; curr; curr = curr->next )
+    {
+      if ( IS_SET( curr->location->seen, SUBGRAPH_NODE ) && curr->location != *node )
+      {
+        CREATE( reln, subgraph_reln, 1 );
+        reln->parent = curr->location;
+        reln->child = *node;
+        reln->reln_type = curr->reln_type;
+        LINK2( reln, reln_head, reln_tail, next, prev );
+        (*count)++;
+      }
+      else if ( curr->location->data )
+      {
+        int *iptr;
+
+        for ( tptr = curr->location->data, iptr = curr->location->reln_types; *tptr; tptr++, iptr++ )
+        {
+          if ( IS_SET( (*tptr)->seen, SUBGRAPH_VISITED ) )
+            continue;
+
+          CREATE( step, one_step, 1 );
+          step->location = *tptr;
+          step->backtrace = curr;
+          step->reln_type = *iptr;
+          LINK2( step, step_head, step_tail, next, prev );
+          SET_BIT( (*tptr)->seen, SUBGRAPH_VISITED );
+        }
+      }
+    }
+
+    for ( step = step_head; step; step = step->next )
+      REMOVE_BIT( step->location->seen, SUBGRAPH_VISITED );
+
+    free_one_steps( step_head );
+  }
+
+  for ( tptr = nodes; *tptr; tptr++ )
+    (*tptr)->seen = 0;
+
+  return reln_head;
+}

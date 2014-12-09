@@ -107,3 +107,4 @@ void send_gui( http_request *req );
 void send_js( http_request *req );
 char *load_file( char *filename );
 void handle_shortpath( char *request, http_request *req );
+void handle_subgraph_request( http_request *req, char *request );

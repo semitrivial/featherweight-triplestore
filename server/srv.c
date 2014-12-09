@@ -155,6 +155,13 @@ void main_loop( void )
         return;
       }
 
+      if ( !strcmp( reqtype, "subgraph" ) )
+      {
+        handle_subgraph_request( req, request );
+        free( request );
+        return;
+      }
+
       if ( !strcmp( reqtype, "count" ) )
         count = get_count_by_iri( request );
       else if ( !strcmp( reqtype, "count-recursive" ) )
@@ -509,7 +516,7 @@ void send_400_response( http_request *req, char *err )
                 "Date: %s\r\n"
                 "Content-Type: text/plain; charset=utf-8\r\n"
                 "%s"
-                "Content-Length: %d\r\n"
+                "Content-Length: %zd\r\n"
                 "\r\n"
                 "%s",
                 current_date(),
@@ -533,7 +540,7 @@ void send_200_with_type( http_request *req, char *txt, char *type )
                 "Date: %s\r\n"
                 "Content-Type: %s; charset=utf-8\r\n"
                 "%s"
-                "Content-Length: %d\r\n"
+                "Content-Length: %zd\r\n"
                 "\r\n"
                 "%s",
                 current_date(),
@@ -686,4 +693,97 @@ void handle_shortpath( char *request, http_request *req )
     free( buf );
     free_trie_path( p );
   }
+}
+
+void handle_subgraph_request( http_request *req, char *request )
+{
+  int commas = 0, fEnd = 0, count=0, fFirst;
+  trie **nodes, **nptr, *t;
+  char *ptr, *left, *buf, *bptr;
+  subgraph_reln *head, *reln, *reln_next;
+
+  for ( ptr = request; *ptr; ptr++ )
+    if ( *ptr == ',' )
+      commas++;
+
+  CREATE( nodes, trie *, commas + 2 );
+  nptr = nodes;
+
+  left = ptr = request;
+
+  for ( ; ; )
+  {
+    if ( *ptr == ',' || !*ptr )
+    {
+      if ( *ptr )
+        *ptr = '\0';
+      else
+        fEnd = 1;
+
+      if ( left == ptr )
+      {
+        send_400_response( req, "Blank node name" );
+        free( nodes );
+        return;
+      }
+
+      t = trie_search( left, iritrie );
+      if ( !t )
+      {
+        if ( strlen(left) < 100 )
+        {
+          char *buf = malloc( strlen(left) + 1024 );
+          sprintf( buf, "Node %s is not in the database", left );
+          send_400_response( req, buf );
+          free(buf);
+        }
+        else
+          send_400_response( req, "One of the specified nodes is not in the database" );
+
+        free( nodes );
+        return;
+      }
+
+      *nptr++ = t;
+      left = &ptr[1];
+    }
+    if ( fEnd )
+      break;
+
+    ptr++;
+  }
+
+  *nptr = NULL;
+
+  head = compute_subgraph( nodes, &count );
+  free( nodes );
+
+  CREATE( buf, char, 256 + 2*count*(MAX_LABEL_LEN+64) );
+
+  sprintf( buf, "{\n \"Results\":\n [" );
+
+  bptr = &buf[strlen(buf)];
+
+  for ( reln = head, fFirst = 0; reln; reln = reln_next )
+  {
+    reln_next = reln->next;
+
+    if ( fFirst )
+    {
+      *bptr++ = ',';
+      *bptr++ = '\n';
+    }
+    else
+      fFirst = 1;
+
+    sprintf( bptr, "  {\n   \"parent\": %s\n", trie_to_static( reln->parent ) );
+    bptr = &bptr[strlen(bptr)];
+    sprintf( bptr, "   \"child\": %s\n   \"type\": %s\n  }", trie_to_static( reln->child ), reln_type_to_string( reln->reln_type ) );
+    bptr = &bptr[strlen(bptr)];
+
+    free( reln );
+  }
+
+  send_200_response( req, buf );
+  free( buf );
 }
