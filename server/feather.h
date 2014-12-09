@@ -16,7 +16,7 @@
 
 #define SUBGRAPH_NODE 1
 #define SUBGRAPH_VISITED 2
-#define SUBGRAPH_AVOID_DUPES 3
+#define SUBGRAPH_AVOID_DUPES 4
 
 /*
  * Typedefs

@@ -760,7 +760,7 @@ void handle_subgraph_request( http_request *req, char *request )
 
   CREATE( buf, char, 256 + 2*count*(MAX_LABEL_LEN+64) );
 
-  sprintf( buf, "{\n \"Results\":\n [" );
+  sprintf( buf, "{\n \"Results\":\n [\n" );
 
   bptr = &buf[strlen(buf)];
 
@@ -783,6 +783,8 @@ void handle_subgraph_request( http_request *req, char *request )
 
     free( reln );
   }
+
+  sprintf( bptr, "\n ]\n}" );
 
   send_200_response( req, buf );
   free( buf );
