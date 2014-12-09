@@ -458,7 +458,12 @@ subgraph_reln *compute_subgraph( trie **nodes, int *count )
           CREATE( step, one_step, 1 );
           step->location = *tptr;
           step->backtrace = curr;
-          step->reln_type = *iptr;
+
+          if ( curr->reln_type == RELN_TYPE_PART )
+            step->reln_type = RELN_TYPE_PART;
+          else
+            step->reln_type = *iptr;
+
           LINK2( step, step_head, step_tail, next, prev );
           SET_BIT( (*tptr)->seen, SUBGRAPH_VISITED );
         }
