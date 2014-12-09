@@ -669,7 +669,7 @@ void handle_shortpath( char *request, http_request *req )
       else
         fFirst = 1;
 
-      sprintf( bptr, "%s", get_url_shortform(trie_to_static( *tptr )) );
+      sprintf( bptr, "\"%s\"", get_url_shortform(trie_to_static( *tptr )) );
       bptr = &bptr[strlen(bptr)];
     }
 
@@ -683,7 +683,7 @@ void handle_shortpath( char *request, http_request *req )
       else
         fFirst = 1;
 
-      sprintf( bptr, "%s", reln_type_to_string( *iptr ) );
+      sprintf( bptr, "\"%s\"", reln_type_to_string( *iptr ) );
       bptr = &bptr[strlen(bptr)];
     }
 
@@ -800,9 +800,9 @@ void handle_subgraph_request( http_request *req, char *request )
     else
       fFirst = 1;
 
-    sprintf( bptr, "  {\n   \"parent\": %s\n", trie_to_static( reln->parent ) );
+    sprintf( bptr, "  {\n   \"parent\": \"%s\",\n", get_url_shortform(trie_to_static( reln->parent )) );
     bptr = &bptr[strlen(bptr)];
-    sprintf( bptr, "   \"child\": %s\n   \"type\": %s\n  }", trie_to_static( reln->child ), reln_type_to_string( reln->reln_type ) );
+    sprintf( bptr, "   \"child\": \"%s\",\n   \"type\": \"%s\"\n  }", get_url_shortform(trie_to_static( reln->child )), reln_type_to_string( reln->reln_type ) );
     bptr = &bptr[strlen(bptr)];
 
     free( reln );
