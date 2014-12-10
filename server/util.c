@@ -105,16 +105,31 @@ char *lowercaserize( char *x )
 char *get_url_shortform( char *iri )
 {
   char *ptr;
+  int end_index;
 
   if ( iri[0] != 'h' || iri[1] != 't' || iri[2] != 't' || iri[3] != 'p' )
     return iri;
 
-  ptr = &iri[strlen(iri)-1];
+  end_index = strlen(iri)-1;
+
+  ptr = &iri[end_index];
 
   do
   {
     if ( ptr <= iri )
-      return iri;
+    {
+      ptr = &iri[end_index];
+
+      do
+      {
+        if ( ptr <= iri )
+          return iri;
+        if ( *ptr == '/' )
+          return &ptr[1];
+        ptr--;
+      }
+      while(1);
+    }
     if ( *ptr == '#' )
       return &ptr[1];
     ptr--;
