@@ -244,12 +244,12 @@ trie *trie_search_with_prefix( char *prefix, char *buf, trie *base )
 
 char *trie_to_static( trie *t )
 {
-  static char buf[MAX_STRING_LEN + 1], *bptr;
+  static char buf[MAX_STRING_LEN + 2], *bptr;
   trie *ancestor;
   char *label, *lptr;
 
-  bptr = &buf[MAX_STRING_LEN];
-  *bptr = '\0';
+  bptr = &buf[MAX_STRING_LEN+1];
+  *bptr-- = '\0';
 
   ancestor = t;
 
