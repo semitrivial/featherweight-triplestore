@@ -100,6 +100,8 @@ void init_feather_http_server( void )
     abort();
   }
 
+  freeaddrinfo( servinfo );
+
   return;
 }
 
